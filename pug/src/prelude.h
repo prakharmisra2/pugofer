@@ -307,7 +307,7 @@ typedef unsigned Unsigned;
 #if     RISCOS
 #define STD_PRELUDE	   "prelude"
 #else
-#define STD_PRELUDE	   "pustd_uni.pre"
+#define STD_PRELUDE	   "pusimple_uni.pre"
 #endif
 #endif
 #endif
