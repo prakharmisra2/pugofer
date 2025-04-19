@@ -14,7 +14,11 @@
 #include <ctype.h>
 #include "input.h"
 #include "parser.h"
+//pthread
+#if WASM
+#include "thread_stream.h"
 
+#endif
 /* --------------------------------------------------------------------------
  * Global data:
  * ------------------------------------------------------------------------*/
@@ -158,7 +162,11 @@ String str; {
     return promptBuf;
 }
 #else
+#ifndef WASM
 #define nextConsoleChar()   getc(stdin)
+#else 
+#define nextConsoleChar()   readInputStream()
+#endif
 #endif
 
 static	Int litLines;		       /* count defn lines in lit script   */
@@ -422,7 +430,8 @@ static Text local readMidDotAsDot(){
 	do {
 	saveTokenChar(c);
 	skip();
-    } while (c0!=EOF && isascii(c0) && isoneof(c0,SYMBOLS));
+	skip();
+    } while (c0!=EOF && (isoneof(c0,SYMBOLS) || (c0 == 0xC2 && c1 == 0xB7)));
     opType = (tokenStr[0]==':' ? CONOP : VAROP);
     endToken();
     return findText(tokenStr);
@@ -1069,7 +1078,7 @@ Int yylex() {	       /* Read next input token ...	   */
 		if (c0 == 0xC2) { // Check for the first byte
         //unsigned char nextByte = getNextChar(); // Get the second byte
         if (c1 == 0xB7) {
-            skip(); // Consume the second byte
+            //skip(); // Consume the second byte
             Text it = readMidDotAsDot();
 
 			if (it==textCoco[newSyntax])    return ':';

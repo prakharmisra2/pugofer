@@ -14,6 +14,7 @@
 #include "errors.h"
 #include <setjmp.h>
 #include <ctype.h>
+#include <pthread.h>
 
 /* --------------------------------------------------------------------------
  * Machine dependent code for Gofer interpreter:
@@ -21,6 +22,12 @@
 
 #define  MACHDEP_GOFER 1
 #include "machdep.c"
+
+/* Pthreads */
+#if WASM
+#include <emscripten.h>
+#include <emscripten/threading.h>
+#endif
 
 /* --------------------------------------------------------------------------
  * Shared parts of user interface:
@@ -67,6 +74,33 @@ static Bool listFiles = TRUE;		/* TRUE => list files after loading*/
 /* --------------------------------------------------------------------------
  * Gofer entry point:
  * ------------------------------------------------------------------------*/
+typedef struct {
+    int argc;
+    char** argv;
+} ThreadArgs;
+
+void my_callback_on_main_thread1(void* arg) {
+	EM_ASM({
+		postMessage(UTF8ToString($0));
+	},(char *)arg);
+}
+void send_message_to_main1(const char *msg){
+	emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI, my_callback_on_main_thread1, (void*)msg);
+}
+
+void* threadFunction(void* arg) {
+	ThreadArgs* args = (ThreadArgs*)arg;
+	//initializer();    // Initialize the reader and writer threads
+	EM_ASM({
+			console.log(UTF8ToString($0));
+		},"[initializing interpreter]");
+	
+	interpreter(args->argc, args->argv);
+	
+	EM_ASM({
+			console.log(UTF8ToString($0));
+		},"[after interpreter]");
+}
 
 Main main Args((Int, String []));	/* now every func has a prototype  */
 
@@ -79,8 +113,33 @@ char *argv[]; {
     /* charge.  I ask however that you show your appreciation for the many */
     /* hours of work involved by retaining my name in the banner.  Thanks! */
     banner();
+	EM_ASM({
+			console.log(UTF8ToString($0));
+		},"[Starting Gofer]");
+	EM_ASM({
+		postMessage("Gofer started and post message");
+		// onmessage = async function(e) {
+		// 	if(e.data.command == "output")
+		// 	console.log("Message from some thread: " + e.data.data);
+		// };
+	});
     fflush(stdout);
+	// TODO: In WASM start the interpreter in a separate thread
+#ifndef WASM
     interpreter(argc,argv);
+#else 
+	ThreadArgs* args = malloc(sizeof(ThreadArgs));
+	args->argc = argc;
+    args->argv = argv;
+	pthread_t thread;
+	int ret = pthread_create(&thread, NULL, threadFunction, args);
+	if (ret != 0) {
+    	EM_ASM({
+       		console.error("pthread_create failed with code:", $0);
+    	}, ret);
+	}
+	
+#endif
     printf("[Leaving Gofer]\n");
     everybody(EXIT);
     exit(0);
@@ -103,7 +162,7 @@ String argv[]; {
     numScripts	  = 0;
     namesUpto	  = 1;
     scriptName[0] = strCopy(fromEnv("PUGOFER",STD_PRELUDE));
-    prompt	  = strCopy("?");
+    prompt	  = strCopy("");
     repeatStr	  = strCopy("$$");
 
     for (i=1; i<argc; ++i)		/* process command line arguments  */
@@ -140,7 +199,7 @@ static struct cmd cmds[] = {
  {"",      EVAL},
  {0,0}
 };
-
+#ifndef WASM
 static Void local menu() {
     printf("LIST OF COMMANDS:  Any command may be abbreviated to :c where\n");
     printf("c is the first character in the full name.\n\n");
@@ -164,7 +223,6 @@ static Void local menu() {
     printf(":gc                 force garbage collection\n");
     printf(":quit               exit Gofer interpreter\n");
 }
-
 static Void local guidance() {
     printf("Command not recognised.  ");
     forHelp();
@@ -173,6 +231,41 @@ static Void local guidance() {
 static Void local forHelp() {
     printf("Type :? for help\n");
 }
+#else
+static Void local menu() {
+	send_message_to_main1("LIST OF COMMANDS:  Any command may be abbreviated to :c where\n");
+	send_message_to_main1("c is the first character in the full name.\n\n");
+	send_message_to_main1(":load <filenames>   load scripts from specified files\n");
+	send_message_to_main1(":load               clear all files except prelude\n");
+	send_message_to_main1(":also <filenames>   read additional script files\n");
+	send_message_to_main1(":reload             repeat last load command\n");
+	send_message_to_main1(":project <filename> use project file\n");
+	send_message_to_main1(":edit <filename>    edit file\n");
+	send_message_to_main1(":edit               edit last file\n");
+	send_message_to_main1("<expr>              evaluate expression\n");
+	send_message_to_main1(":type <expr>        print type of expression\n");
+	send_message_to_main1(":?                  display this list of commands\n");
+	send_message_to_main1(":set <options>      set command line options\n");
+	send_message_to_main1(":set                help on command line options\n");
+	send_message_to_main1(":names [pat]        list names currently in scope\n");
+	send_message_to_main1(":info <names>       describe named objects\n");
+	send_message_to_main1(":find <name>        edit file containing definition of name\n");
+	send_message_to_main1(":!command           shell escape\n");
+	send_message_to_main1(":cd dir             change directory\n");
+	send_message_to_main1(":gc                 force garbage collection\n");
+	send_message_to_main1(":quit               exit Gofer interpreter\n");
+
+}
+static Void local guidance() {
+	send_message_to_main1("Command not recognised.  ");
+	forHelp();
+}
+static Void local forHelp() {
+	send_message_to_main1("Type :? for help\n");
+}
+#endif
+
+
 
 /* --------------------------------------------------------------------------
  * Setting of command line options:
@@ -297,13 +390,21 @@ Int first; {				/* loading everything after and	   */
 static Void local whatFiles() {		/* list files in current session   */
     int i;
     if (0) {infWhatFiles(); return;}
+#ifndef WASM
     printf("\nGofer session for:");
     if (projectLoaded)
 	printf(" (project: %s)",currProject);
     for (i=0; i<numScripts; ++i)
 	printf("\n%s",scriptName[i]);
     putchar('\n');
-
+#else 
+	send_message_to_main1("Gofer session for:");
+	if (projectLoaded)
+		send_message_to_main1(currProject);
+	for (i=0; i<numScripts; ++i)
+		send_message_to_main1(scriptName[i]);
+	send_message_to_main1("\n");
+#endif
 }
 
 /* --------------------------------------------------------------------------
@@ -671,7 +772,10 @@ String argv[]; {
 	everybody(RESET);		/* reset to sensible initial state */
 	dropModulesFrom(numScripts-1);	/* remove partially loaded scripts */
 					/* not counting prelude as a module*/
+
+	// TODO: In WASM, instead of the function below, read from the inputStream
 	consoleInput(prompt);
+
 #ifdef WANT_TIMER
         updateTimers();
 #endif
@@ -765,7 +869,13 @@ String msg; {
 Void fatal(msg)				/* handle fatal error		   */
 String msg; {
     fflush(stdout);
+#ifndef WASM
     printf("\nFATAL ERROR: %s\n",msg);
+#else 
+	send_message_to_main1("FATAL ERROR: ");
+	send_message_to_main1(msg);
+	send_message_to_main1("\n");
+#endif
     everybody(EXIT);
     exit(1);
 }
@@ -817,18 +927,34 @@ static Void local bannerContents()
   };
 
   sep = "\n"; /*infProc ? "\\n" : "\n";*/
+#ifndef WASM
   for (i=0; banstrs[i] != NULL; i++)
        printf("%s%s", banstrs[i], sep);
+#else
+	for(i=0; banstrs[i] != NULL; i++)
+	{
+		send_message_to_main1(banstrs[i]);
+	}
+#endif
 }
 static Void local infWhatFiles()
 {
   int i;
   startIPCmd("pu-what-files ");
   if (projectLoaded)
+#ifndef WASM
     printf("\"%s\" ", currProject);
+#else 
+	send_message_to_main1(currProject);
+#endif
   else
     printf("nil ");
+#ifndef WASM
   for (i=0; i < numScripts; i++)
     printf(" \"%s\"", scriptName[i]);
+#else
+	for(i=0; i < numScripts; i++)
+		send_message_to_main1(scriptName[i]);
+#endif
   endIPCmd();
 }
