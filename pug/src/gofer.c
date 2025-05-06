@@ -102,6 +102,13 @@ void* threadFunction(void* arg) {
 		},"[after interpreter]");
 }
 
+/* Define 2 functions
+
+1. Accepts input
+2. Callback that receives output - this function is called when output buffer is available.
+
+*/
+
 Main main Args((Int, String []));	/* now every func has a prototype  */
 
 Main main(argc,argv)
@@ -124,6 +131,29 @@ char *argv[]; {
 		// };
 	});
     fflush(stdout);
+
+#ifdef INVERT_IO && !WASM
+#define EM_ASM(x) ;
+#endif
+
+#ifdef INVERT_IO
+	ThreadArgs* args = malloc(sizeof(ThreadArgs));
+	args->argc = argc;
+	args->argv = argv;
+	pthread_t thread;
+	int ret = pthread_create(&thread, NULL, threadFunction, args);
+	if (ret != 0) {
+		EM_ASM({
+			console.error("pthread_create failed with code:", $0);
+		}, ret);
+	}
+#ifndef WASM
+	// pthread_join(...)
+#endif
+#else
+	interpreter(argc,argv);
+#endif
+
 	// TODO: In WASM start the interpreter in a separate thread
 #ifndef WASM
     interpreter(argc,argv);
