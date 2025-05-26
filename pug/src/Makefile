@@ -1,6 +1,6 @@
 .SUFFIXES	: .y .c .h .o .gs
 OBJECTS		= storage.o input.o static.o type.o compiler.o \
-		  parser.o pug.o
+		  parser.o pug.o thread_stream.o
 IOBJECTS	= gofer.o builtin.o  machine.o output.o $(OBJECTS)
 COBJECTS	= gofc.o cbuiltin.o cmachine.o $(OBJECTS)
 
@@ -27,7 +27,7 @@ COBJECTS	= gofc.o cbuiltin.o cmachine.o $(OBJECTS)
 # For windows and mac builds, refer to variables in ./.github/build-<platform>.sh
 CC		    ?= gcc
 #CFLAGS		= -DUSE_READLINE=1
-CFLAGS		?= -g
+CFLAGS		?= -g 
 LDFLAGS    	?= -lm
 OPTFLAGS	= -O
 OPT1		=
@@ -36,11 +36,19 @@ OPT1		=
 #all		: gofer gofc runtime.o
 gofer_uni : CFLAGS += -DMIDDLEDOT=1 -DWASM=1
 
-gofer		: $(IOBJECTS)
-		$(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer $(LDFLAGS)
+gofer	: CFLAGS += -DWASM=1
 
-gofer_uni : $(IOBJECTS)
+GW_OBJ=$(IOBJECTS) gofer_wrapper.o
+gw :  CFLAGS += -DINVERT_IO=1 -DWASM=0
+
+gofer		: $(IOBJECTS)
+		$(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer_wasm.js $(LDFLAGS)
+
+gofer_uni : $(IOBJECT)
 		  $(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer_uni.js $(LDFLAGS)
+
+gw: $(GW_OBJ)
+		  $(CC) $(CFLAGS) $(OPTFLAGS) $(GW_OBJ) -o gw $(LDFLAGS)
 
 gofc		: $(COBJECTS)
 		  $(CC) $(CFLAGS) $(OPTFLAGS) $(COBJECTS) -o gofc $(LDFLAGS)

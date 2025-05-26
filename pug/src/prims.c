@@ -14,6 +14,14 @@
 #include <io.h>
 #endif
 #endif
+#if INVERT_IO
+#include "thread_stream.h"
+#if WASM
+#include <emscripten.h>
+#include <emscripten/threading.h>
+#endif
+#endif
+
 
 /* --------------------------------------------------------------------------
  * Local function prototypes:
@@ -1780,12 +1788,10 @@ FILE *fp; {				/* on specified output stream fp   */
 /* --------------------------------------------------------------------------
  * Top-level printing mechanism:
  * ------------------------------------------------------------------------*/
-
 Cell outputString(fp,cs)		/* Evaluate string cs and print	   */
 FILE *fp;				/* on specified output stream fp   */
 Cell cs; {
     Cell temp;
-
     for (;;) {				/* keep reducing and printing head */
 	clearStack();			/* character			   */
 	temp = evalWithNoError(cs);
@@ -1798,7 +1804,14 @@ Cell cs; {
 	    if (nonNull(temp=evalWithNoError(c)))
 		cs = printBadRedex(temp,cs);
 	    else if (isChar(whnfHead) && whnfArgs==0) {
-		fputc(charOf(whnfHead),fp);
+#if !INVERT_IO
+		fput c(charOf(whnfHead),fp);
+#else 
+        //writeOutputStream(charOf(whnfHead),"int");
+        Char ch = charOf(whnfHead);
+        writeOutputStream(&ch,"char");
+        //printf("%c",charOf(whnfHead));
+#endif
 		    fflush(fp);
 	    }
 	    else

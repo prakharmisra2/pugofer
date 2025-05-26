@@ -9,6 +9,10 @@
 extern "C" {
 #endif
 
+// Create a typedef that points to a function pointer
+// that accepts a char array, an int and returns void
+typedef void (*OutputCallback)(char*, int);
+
 typedef struct {
     char buffer[BUFFER_SIZE];
     int head;

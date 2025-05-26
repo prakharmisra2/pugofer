@@ -54,6 +54,10 @@
 #ifndef WASM
 #define WASM	 0
 #endif
+#ifndef INVERT_IO 
+#define INVERT_IO 0
+#endif
+
 /*---------------------------------------------------------------------------
  * To add a new machine/compiler, add a new macro line above, add the new
  * to the appropriate flags below and add a `machine specific' section in the
@@ -297,6 +301,7 @@ typedef int      Char;
 typedef unsigned Unsigned;
 
 #ifndef MIDDLEDOT
+#define MIDDOT 0
 #ifndef STD_PRELUDE
 #if     RISCOS
 #define STD_PRELUDE	   "prelude"

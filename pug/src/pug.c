@@ -2,7 +2,13 @@
 #include "storage.h"
 #include "pug.h"
 Bool   newSyntax  = TRUE;
+
+#if MIDDOT
 Char   apChar[2]  = {' ', 0xC2};
+#else
+Char apChar[2]  = {' ', '.'};
+#endif
+
 String typeStr[2] = {"::", ":"};
 String consStr[2] = {":", "::"};
 String bindStr[2] = {"bind", ".."};

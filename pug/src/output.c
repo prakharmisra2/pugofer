@@ -14,11 +14,12 @@
 #include "errors.h"
 #include <ctype.h>
 #endif
-#ifdef WASM
-
+#if INVERT_IO
+#include "thread_stream.h"
+#if WASM
 #include <emscripten.h>
 #include <emscripten/threading.h>
-
+#endif
 #endif
 
 /* --------------------------------------------------------------------------
@@ -79,17 +80,18 @@ static Int  outColumn = 0;		/* current output column number	   */
 Bool   showDicts = FALSE;		/* TRUE => include dictionary vars */
 					/*	   in output expressions   */
 					
-void my_callback_on_main_thread(void* arg) {
-	EM_ASM({
-		postMessage(UTF8ToString($0));
-	},(char *)arg);
-}
-void send_message_to_main(const char *msg){
-	emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI, my_callback_on_main_thread, (void*)msg);
-}
+// void my_callback_on_main_thread(void* arg) {
+// 	EM_ASM({
+// 		postMessage(UTF8ToString($0));
+// 	},(char *)arg);
+// }
+// void send_message_to_main(const char *msg){
+// 	emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI, my_callback_on_main_thread, (void*)msg);
+// }
+
 #define OPEN(b)    if (b) putChr('(');
 #define CLOSE(b)   if (b) putChr(')');
-#ifndef WASM
+#if !INVERT_IO
 static Void local putChr(c)             /* print single character          */
 Int c; {
     putc(c,outputStream);
@@ -97,20 +99,22 @@ Int c; {
 }
 #else
 	static Void local putChr(c)
-	{
-		// writeOutputStream(&c, "char");
-		send_message_to_main((char *)&c);
+	Int c;{
+		writeOutputStream(&c, "char");
+		//send_message_to_main((char *)&c);
+		#if WASM
 		EM_ASM({
             console.log( ($0));
 			//send_message_to_main($0);
         },c);
+		#endif
 	}
 #endif
 
 // TODO: Replace putChr above to send a message to the main thread
 // Do this similarly for putStr and putInt below
 // Finally, tackle the printf too.
-#ifndef WASM
+#if !INVERT_IO
 static Void local putStr(s)             /* print string                    */
 String s; {
     for (; *s; s++) {
@@ -121,16 +125,18 @@ String s; {
 #else
 	static Void local putStr(s)
 	String s;{
-		// writeOutputStream(s, "str");
-		send_message_to_main(s);
+		writeOutputStream(s, "str");
+		//send_message_to_main(s);
+		#if WASM
 		EM_ASM({
 			console.log(UTF8ToString($0));
 			//send_message_to_main(UTF8ToString($0));
 		},s);
+		#endif
 	}
 #endif
 
-#ifndef WASM
+#if !INVERT_IO
 static Void local putInt(n)             /* print integer                   */
 Int n; {
     static char intBuf[16];
@@ -139,17 +145,19 @@ Int n; {
 }
 #else
 	static Void local putInt(n)
-	{
-		//writeOutputStream(&n, "int");
-		send_message_to_main((int *)&n);
+	Int n;{
+		writeOutputStream(&n, "int");
+		//send_message_to_main((int *)&n);
+		#if WASM
 		EM_ASM({
-			console.log($0);
+			//console.log($0);
 			//send_message_to_main($0);
 		},n);
+		#endif
 	}
 #endif
 
-#ifndef WASM
+#if !INVERT_IO
 static Void local indent(n)             /* indent to particular position   */
 Int n; {
     outColumn = n;
@@ -159,15 +167,18 @@ Int n; {
 }
 #else
 	static Void local indent(n)
-	{
+	Int n; {
+		outColumn = n;
 		while(0<n--) {
-			//writeOutputStream(" ","str");
-			 send_message_to_main(" ");
+			writeOutputStream(" ","str");
+			//send_message_to_main(" ");
 		}
-		 EM_ASM({
+		#if WASM
+		EM_ASM({
 		 	console.log(" ");
 		 	//send_message_to_main(" ");
-		 });
+		});
+		#endif
 	}
 #endif
 /* --------------------------------------------------------------------------
@@ -1239,7 +1250,17 @@ Cell sig; {
 /*-------------------------------------------------------------------------*/
 Void printTypeStr(FILE *fp) /*RPM*/
 {
+#if !INVERT_IO
   fprintf(fp, " %s ", typeStr[newSyntax]);
+#else
+	  writeOutputStream(typeStr[newSyntax], "str");
+  #if WASM
+  EM_ASM({
+	console.log(UTF8ToString($0));
+  },typeStr[newSyntax]);
+  #endif
+#endif
+
 }
 
 #if 0

@@ -12,6 +12,7 @@
 #include "command.h"
 #include "connect.h"
 #include "errors.h"
+#include "thread_stream.h"
 #include <setjmp.h>
 #include <ctype.h>
 #include <pthread.h>
@@ -79,6 +80,7 @@ typedef struct {
     char** argv;
 } ThreadArgs;
 
+#if WASM
 void my_callback_on_main_thread1(void* arg) {
 	EM_ASM({
 		postMessage(UTF8ToString($0));
@@ -88,21 +90,32 @@ void send_message_to_main1(const char *msg){
 	emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI, my_callback_on_main_thread1, (void*)msg);
 }
 
+#endif
+
+#if INVERT_IO
 void* threadFunction(void* arg) {
 	ThreadArgs* args = (ThreadArgs*)arg;
-	//initializer();    // Initialize the reader and writer threads
+	#if WASM
 	EM_ASM({
 			console.log(UTF8ToString($0));
 		},"[initializing interpreter]");
-	
+
+	#endif
+
 	interpreter(args->argc, args->argv);
-	
+
+	#if WASM
 	EM_ASM({
 			console.log(UTF8ToString($0));
 		},"[after interpreter]");
+	#endif
+
 }
+#endif
 
 Main main Args((Int, String []));	/* now every func has a prototype  */
+
+#if WASM
 
 Main main(argc,argv)
 int  argc;
@@ -124,10 +137,6 @@ char *argv[]; {
 		// };
 	});
     fflush(stdout);
-	// TODO: In WASM start the interpreter in a separate thread
-#ifndef WASM
-    interpreter(argc,argv);
-#else 
 	ThreadArgs* args = malloc(sizeof(ThreadArgs));
 	args->argc = argc;
     args->argv = argv;
@@ -138,13 +147,57 @@ char *argv[]; {
        		console.error("pthread_create failed with code:", $0);
     	}, ret);
 	}
-	
-#endif
+}
+
+#else
+
+#if !INVERT_IO
+
+Main main(argc,argv)
+int  argc;
+char *argv[]; {
+    CStackBase = &argc;                 /* Save stack base for use in gc   */
+
+    /* The startup banner now includes my name.  Gofer is provided free of */
+    /* charge.  I ask however that you show your appreciation for the many */
+    /* hours of work involved by retaining my name in the banner.  Thanks! */
+    banner();
+    fflush(stdout);
+    interpreter(argc,argv);
     printf("[Leaving Gofer]\n");
     everybody(EXIT);
     exit(0);
     MainDone
 }
+
+#endif
+#endif
+
+#if INVERT_IO
+int initializeGoferLoop(int  argc, char *argv[],  OutputCallback fnCallback) {
+   CStackBase = &argc;                 /* Save stack base for use in gc   */
+
+    /* The startup banner now includes my name.  Gofer is provided free of */
+    /* charge.  I ask however that you show your appreciation for the many */
+    /* hours of work involved by retaining my name in the banner.  Thanks! */
+    banner();
+    fflush(stdout);
+
+    initializer();    // Initialize the reader and writer threads
+
+	ThreadArgs* args = malloc(sizeof(ThreadArgs));
+	args->argc = argc;
+    args->argv = argv;
+	pthread_t thread;
+	int ret = pthread_create(&thread, NULL, threadFunction, args);
+	if (ret != 0) {
+		printf("pthread_create failed with code: %d\n", ret);
+	}
+	return ret;
+}
+
+#endif
+
 
 /* --------------------------------------------------------------------------
  * Initialisation, interpret command line args and read prelude:
@@ -162,7 +215,7 @@ String argv[]; {
     numScripts	  = 0;
     namesUpto	  = 1;
     scriptName[0] = strCopy(fromEnv("PUGOFER",STD_PRELUDE));
-    prompt	  = strCopy("");
+    prompt	  = strCopy("?");
     repeatStr	  = strCopy("$$");
 
     for (i=1; i<argc; ++i)		/* process command line arguments  */
@@ -199,7 +252,8 @@ static struct cmd cmds[] = {
  {"",      EVAL},
  {0,0}
 };
-#ifndef WASM
+
+#if !WASM
 static Void local menu() {
     printf("LIST OF COMMANDS:  Any command may be abbreviated to :c where\n");
     printf("c is the first character in the full name.\n\n");
@@ -390,14 +444,14 @@ Int first; {				/* loading everything after and	   */
 static Void local whatFiles() {		/* list files in current session   */
     int i;
     if (0) {infWhatFiles(); return;}
-#ifndef WASM
+#if! WASM
     printf("\nGofer session for:");
     if (projectLoaded)
 	printf(" (project: %s)",currProject);
     for (i=0; i<numScripts; ++i)
 	printf("\n%s",scriptName[i]);
     putchar('\n');
-#else 
+#else
 	send_message_to_main1("Gofer session for:");
 	if (projectLoaded)
 		send_message_to_main1(currProject);
@@ -457,7 +511,7 @@ static Void local runEditor() {		/* run editor on file lastEdit at  */
 	sprintf(editorCmd, "(pu-find-file \"%s\" %d)",lastEdit,lastLine);
       else
 	sprintf(editorCmd, "(pu-find-file)");
-      
+
       printf("%s%s%s\n", infCh, editorCmd, infCh);
       return;
     }
@@ -869,9 +923,9 @@ String msg; {
 Void fatal(msg)				/* handle fatal error		   */
 String msg; {
     fflush(stdout);
-#ifndef WASM
+#if !WASM
     printf("\nFATAL ERROR: %s\n",msg);
-#else 
+#else
 	send_message_to_main1("FATAL ERROR: ");
 	send_message_to_main1(msg);
 	send_message_to_main1("\n");
@@ -927,7 +981,7 @@ static Void local bannerContents()
   };
 
   sep = "\n"; /*infProc ? "\\n" : "\n";*/
-#ifndef WASM
+#if !WASM
   for (i=0; banstrs[i] != NULL; i++)
        printf("%s%s", banstrs[i], sep);
 #else
@@ -942,14 +996,14 @@ static Void local infWhatFiles()
   int i;
   startIPCmd("pu-what-files ");
   if (projectLoaded)
-#ifndef WASM
+#if !WASM
     printf("\"%s\" ", currProject);
-#else 
+#else
 	send_message_to_main1(currProject);
 #endif
   else
     printf("nil ");
-#ifndef WASM
+#if !WASM
   for (i=0; i < numScripts; i++)
     printf(" \"%s\"", scriptName[i]);
 #else

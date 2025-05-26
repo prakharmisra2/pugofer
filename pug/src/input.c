@@ -15,7 +15,7 @@
 #include "input.h"
 #include "parser.h"
 //pthread
-#if WASM
+#if INVERT_IO
 #include "thread_stream.h"
 
 #endif
@@ -162,7 +162,7 @@ String str; {
     return promptBuf;
 }
 #else
-#ifndef WASM
+#if !INVERT_IO
 #define nextConsoleChar()   getc(stdin)
 #else 
 #define nextConsoleChar()   readInputStream()

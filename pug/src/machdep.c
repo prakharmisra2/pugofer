@@ -281,8 +281,8 @@ Void gcCStack() {			/* Garbage collect elements off    */
 #if   (TERMIO_IO | SGTTY_IO | TERMIOS_IO)
 
 #if TERMIO_IO
-#include <termio.h>
-typedef  struct termio   TermParams;
+#include <termios.h>
+typedef  struct termios   TermParams;
 #define  getTerminal(tp) ioctl(fileno(stdin),TCGETA,&tp)
 #define  setTerminal(tp) ioctl(fileno(stdin),TCSETAF,&tp)
 #define  noEcho(tp)      tp.c_lflag    &= ~(ICANON | ECHO); \
