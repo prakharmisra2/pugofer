@@ -5,13 +5,13 @@
 --     /  /___/  /  /  /___/  /  /  /         /  /______   /  /  \  \ 
 --    /_________/  /_________/  /__/         /_________/  /__/    \__\
 --
---    Functional programming environment, Version 2·28
---    Copyright Mark P Jones 1991-1993·
+--    Functional programming environment, Version 2.28
+--    Copyright Mark P Jones 1991-1993.
 --    PU Additions
---    Copyright Rusi Mody 1995-2015·
+--    Copyright Rusi Mody 1995-2015.
 --
 --    Standard prelude for use of overloaded values using type classes·
---    Based on the Haskell standard prelude version 1·2·
+--    Based on the Haskell standard prelude version 1.2.
 
 help = "press :? for a list of commands"
 
@@ -219,7 +219,7 @@ instance Eq·Float where (==) = primEqFloat
 instance Ord·Float where (<=) = primLeFloat
 
 instance Enum·Float where
-    enumFrom·n		= iterate·(1·0 +)·n
+    enumFrom·n		= iterate·(1.0 +)·n
     enumFromThen·n·m	= iterate·((m - n) +)·n
 
 instance Num·Float where
@@ -239,7 +239,7 @@ primitive atan2    "primAtan2Float" : Float -> Float -> Float
 primitive truncate "primFloatToInt" : Float -> Int
 
 pi : Float
-pi  = 3·1415926535
+pi  = 3.1415926535
 
 {- PC version on -}
 
@@ -352,7 +352,7 @@ init             : [a] -> [a]
 init·[x]	= []
 init·(x::xs)	= x :: init·xs
 
-(++)             : [a] -> [a] -> [a]    -- append lists·  Associative with
+(++)             : [a] -> [a] -> [a]    -- append lists.  Associative with
 [] ++ ys	= ys
 (x::xs) ++ ys	= x :: (xs ++ ys)
 
@@ -401,15 +401,15 @@ transpose	= foldr·(\xs xss -> zipWith·(::)·xs·(xss ++ repeat·[]))·[]
 
 -- null provides a simple and efficient way of determining whether a given
 -- list is empty, without using (==) and hence avoiding a constraint of the
--- form Eq [a]·
+-- form Eq [a].
 
 null             : [a] -> Bool
 null·[]		= True
 null·(_::_)	= False
 
 -- (\\) is used to remove the first occurrence of each element in the second
--- list from the first list·  It is a kind of inverse of (++) in the sense
--- that  (xs ++ ys) \\ xs = ys for any finite list xs of proper values xs·
+-- list from the first list.  It is a kind of inverse of (++) in the sense
+-- that  (xs ++ ys) \\ xs = ys for any finite list xs of proper values xs.
 
 (\\)             : Eq·a => [a] -> [a] -> [a]
 (\\)              = foldl·del
@@ -420,8 +420,8 @@ null·(_::_)	= False
 
 
 -- map f xs applies the function f to each element of the list xs returning
--- the corresponding list of results·  filter p xs returns the sublist of xs
--- containing those elements which satisfy the predicate p·
+-- the corresponding list of results.  filter p xs returns the sublist of xs
+-- containing those elements which satisfy the predicate p.
  
 map              : (a -> b) -> [a] -> [b]
 map·f·[]	= []
@@ -436,15 +436,15 @@ filter·p·(x::xs)
 
 -- Fold primitives:  The foldl and scanl functions, variants foldl1 and
 -- scanl1 for non-empty lists, and strict variants foldl' scanl' describe
--- common patterns of recursion over lists·  Informally:
+-- common patterns of recursion over lists.  Informally:
 --
 --  foldl f a [x1, x2, ···, xn]  = f (···(f (f a x1) x2)···) xn
 --                               = (···((a `f` x1) `f` x2)···) `f` xn
--- etc···
+-- etc...
 --
 -- The functions foldr, scanr and variants foldr1, scanr1 are duals of these
 -- functions:
--- e·g·  foldr f a xs = foldl (flip f) a (reverse xs)  for finite lists xs·
+-- e.g.  foldr f a xs = foldl (flip f) a (reverse xs)  for finite lists xs.
 
 foldl            : (a -> b -> a) -> a -> [b] -> a
 foldl·f·z·[]	  = z
@@ -544,12 +544,12 @@ span·p·xs@(x::xs')
 break·p	= span·(p ; not)
 
 -- Text processing:
---   lines s     returns the list of lines in the string s·
---   words s     returns the list of words in the string s·
+--   lines s     returns the list of lines in the string s.
+--   words s     returns the list of words in the string s.
 --   unlines ls  joins the list of lines ls into a single string
---               with lines separated by newline characters·
+--               with lines separated by newline characters.
 --   unwords ws  joins the list of words ws into a single string
---               with words separated by spaces·
+--               with words separated by spaces.
 
 lines     : String -> [String]
 lines·""	= []
@@ -666,8 +666,9 @@ space       : Int -> String
 space·n	= copy·n·' '
 
 layn        : [String] -> String
-layn         = lay·1 where lay·_·[]     = []
-                           lay·n·(x::xs) = rjustify·4·(show·n) ++ ") "
+layn         = lay·1 where 
+                        lay·_·[]     = []
+                        lay·n·(x::xs) = rjustify·4·(show·n) ++ ") "
                                            ++ x ++ "\n" ++ lay·(n+1)·xs
 
 -- Miscellaneous: -----------------------------------------------------------
