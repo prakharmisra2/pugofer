@@ -27,23 +27,28 @@ COBJECTS	= gofc.o cbuiltin.o cmachine.o $(OBJECTS)
 # For windows and mac builds, refer to variables in ./.github/build-<platform>.sh
 CC		    ?= gcc
 #CFLAGS		= -DUSE_READLINE=1
-CFLAGS		?=
-LDFLAGS    	?= -lm
+CFLAGS		?=  -g
+LDFLAGS    	?= -lm  # -ledit
 OPTFLAGS	= -O
 OPT1		=
 #OPT1		= -O1
 
 #all		: gofer gofc runtime.o
+gofer_uni : CFLAGS += -DMIDDLEDOT=1
+
+gofer_uni : $(IOBJECTS)
+		  $(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer_uni $(LDFLAGS)
 
 gofer		: $(IOBJECTS)
-		  $(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer $(LDFLAGS)
+		$(CC) $(CFLAGS) $(OPTFLAGS) $(IOBJECTS) -o gofer $(LDFLAGS)
+
 
 gofc		: $(COBJECTS)
 		  $(CC) $(CFLAGS) $(OPTFLAGS) $(COBJECTS) -o gofc $(LDFLAGS)
 		  strip gofc
 
 .c.o		:
-		  $(CC) -c $(CFLAGS) $(OPTFLAGS) $<
+		$(CC) -c $(CFLAGS) $(OPTFLAGS) $<
 
 clean		:
 		  rm -f *.o $(TESTS)

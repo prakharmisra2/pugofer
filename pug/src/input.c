@@ -378,7 +378,15 @@ static Void local closeAnyInput() {	/* close input stream, if open	  */
 #define saveTokenChar(c)    if (tokPos<MAX_TOKEN) saveChar(c); else ++tokPos
 #define saveChar(c)	    tokenStr[tokPos++]=(c)
 #define SPECIALS	    "(),[]_{}"
-#define SYMBOLS 	    ":!#$%&*+./<=>?@\\^|-;"/* For Haskell 1.1: `-' */
+
+#ifndef MIDDLEDOT								//check if MIDDLEDOT flag is defined
+#define SYMBOLS 	    ":!#$%&*+./<=>?@\\^|-;" // if yes then use these symbols
+#define MID_DOT 0								//set MID_DOT to 0 which means that we are not using middle dot as operator
+#else
+#define SYMBOLS 	    ":!#$%&*+/<=>?@\\^|-;"/* For Haskell 1.1: `-' */
+#define MID_DOT 1								//set MID_DOT to 1 which means that we are using middle dot as operator.
+
+#endif
 #define PRESYMBOLS 	    "~"			   /* should be a PRESYMBOL*/
                                                    /* but including it here*/
                                                    /* means we loose eg <- */
@@ -402,6 +410,17 @@ static Text local readOperator() {	/* read operator symbol		   */
     startToken();
     do {
 	saveTokenChar(c0);
+	skip();
+    } while (c0!=EOF && isascii(c0) && isoneof(c0,SYMBOLS));
+    opType = (tokenStr[0]==':' ? CONOP : VAROP);
+    endToken();
+    return findText(tokenStr);
+}
+static Text local readMidDotAsDot(){
+	startToken();
+	int c = 46;
+	do {
+	saveTokenChar(c);
 	skip();
     } while (c0!=EOF && isascii(c0) && isoneof(c0,SYMBOLS));
     opType = (tokenStr[0]==':' ? CONOP : VAROP);
@@ -1046,6 +1065,35 @@ Int yylex() {	       /* Read next input token ...	   */
 	case '`'  : skip();
 		    return '`';
     }
+	if(MID_DOT == 1){		//if we are using middle dot as operator
+		if (c0 == 0xC2) { // Check for the first byte
+        //unsigned char nextByte = getNextChar(); // Get the second byte
+        if (c1 == 0xB7) {
+            skip(); // Consume the second byte
+            Text it = readMidDotAsDot();
+
+			if (it==textCoco[newSyntax])    return ':';
+			if (it==textEq)      return '=';
+			if (it==textUpto[newSyntax])    return UPTO;
+			if (it==textAs)      return '@';
+			if (it==textLambda)  return '\\';
+			if (it==textBar)     return '|';
+			if (it==textFrom)    return FROM;/*relies on notElem '-' PRESYMBOLS*/
+			if (it==textMinus)   return '-';
+			if (it==textArrow)   return FUNARROW;
+			if (it==textLazy)    return '~';
+			if (it==textImplies) return IMPLIES;
+			if (it==textRepeat && reading==KEYBOARD)
+			    return repeatLast();
+
+			top() = yylval = ap((opType==CONOP ? CONOPCELL : VAROPCELL),it);
+			return opType;
+        } else {
+            ERROR(row) "Invalid UTF-8 sequence starting with '\\%d' in column %d", (int)c0, column
+            EEND;
+        }
+    }
+	}
 
     if (!(isascii(c0) && isprint(c0))) {
 	ERROR(row) "Unrecognised character '\\%d' in column %d",

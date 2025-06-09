@@ -294,11 +294,21 @@ typedef long     Long;
 typedef int      Char;
 typedef unsigned Unsigned;
 
+#ifndef MIDDLEDOT
 #ifndef STD_PRELUDE
 #if     RISCOS
 #define STD_PRELUDE	   "prelude"
 #else
 #define STD_PRELUDE	   "pustd.pre"
+#endif
+#endif
+#else
+#ifndef STD_PRELUDE
+#if     RISCOS
+#define STD_PRELUDE	   "prelude"
+#else
+#define STD_PRELUDE	   "pusimple_uni.pre"
+#endif
 #endif
 #endif
 

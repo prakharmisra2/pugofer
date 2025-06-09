@@ -468,6 +468,7 @@ Cell e; {
     if (isAp(e)) {
 	putSimpleAp(maySkipDict(fun(e)));
 	putChr(apChar[newSyntax]);
+	putc(0xB7,stdout);
 	put(FUN_PREC,arg(e));
     }
     else
@@ -510,7 +511,12 @@ Text t; {			       /* operator symbols must be enclosed*/
 	putStr(s);
     else {
 	putChr('(');
-	putStr(s);
+    if(s[0] == '.' && s[1] == '\0') {
+	  putChr(0xC2);
+	  putc(0xB7, stdout);
+    } else {
+	  putStr(s);
+    }
 	putChr(')');
     }
 }

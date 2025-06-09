@@ -27,6 +27,7 @@
  * ------------------------------------------------------------------------*/
 
 #include "commonui.c"
+#include <locale.h>
 
 /* --------------------------------------------------------------------------
  * Local function prototypes:
@@ -73,6 +74,7 @@ Main main Args((Int, String []));	/* now every func has a prototype  */
 Main main(argc,argv)
 int  argc;
 char *argv[]; {
+	setlocale(LC_ALL, "");
     CStackBase = &argc;                 /* Save stack base for use in gc   */
 
     /* The startup banner now includes my name.  Gofer is provided free of */

@@ -1,0 +1,7 @@
+queens.0          = [[]]
+queens.(m+1)      = [ p++[n] | p<-queens.m, n<-[1...8], safe.p.n ]
+
+safe.p.n          = all.not.[ check.(i,j).(m,n) | (i,j) <- zip.[1...].p ]
+                    where m = 1 + length.p
+
+check.(i,j).(m,n) = j==n || (i+j==m+n) || (i-j==m-n)
