@@ -13,6 +13,7 @@
 #include "command.h"
 #include "connect.h"
 #include "errors.h"
+#include "version.h"
 #include <setjmp.h>
 #include <ctype.h>
 
@@ -33,6 +34,7 @@
  * Local function prototypes:
  * ------------------------------------------------------------------------*/
 
+static Void local setPrelude Args((void));
 static Void   local initialise	      Args((Int,String []));
 static Void   local interpreter       Args((Int,String []));
 static Void   local menu	      Args((Void));
@@ -106,6 +108,7 @@ String argv[]; {
     scriptName[0] = strCopy(fromEnv("PUG",STD_PRELUDE));
     prompt	  = strCopy("?");
     repeatStr	  = strCopy("$$");
+	currentLangLevel = strCopy("pug");
 
     for (i=1; i<argc; ++i)		/* process command line arguments  */
 	if (strcmp(argv[i],"+")==0 && i+1<argc)
@@ -117,6 +120,8 @@ String argv[]; {
 		proj = argv[++i];
 	else
 	    addScriptName(argv[i]);
+	
+	setPrelude();
     everybody(INSTALL);
     everybody(CHANGE_SYNTAX);
     if (proj) {
@@ -128,6 +133,32 @@ String argv[]; {
     readScripts(0);
 }
 
+static Void local setPrelude() {
+    char preludePath[FILENAME_MAX];
+    char *prelude = getenv("PUG");
+
+    if (prelude) {
+        strcpy(preludePath, prelude);
+    } else {
+#if defined(_WIN32)
+        char *home = getenv("LOCALAPPDATA");
+        if (home) {
+            sprintf(preludePath, "%s/pug/share/langlevels/%s.pre", home, currentLangLevel);
+        } else {
+            strcpy(preludePath, STD_PRELUDE);
+        }
+#else
+        char *home = getenv("HOME");
+        if (home) {
+            sprintf(preludePath, "%s/.local/share/pug/langlevels/%s.pre", home, currentLangLevel);
+        } else {
+            strcpy(preludePath, STD_PRELUDE);
+			printf("-------->%s", preludePath);
+        }
+#endif
+    }
+    scriptName[0] = strCopy(preludePath);
+}
 /* --------------------------------------------------------------------------
  * Print Menu of list of commands:
  * ------------------------------------------------------------------------*/

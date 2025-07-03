@@ -167,9 +167,9 @@ class TestPugInterpreter(unittest.TestCase):
         if not os.path.exists(langlevel_file):
             self.fail(f"Language level file not found: {langlevel_file}")
 
-        env: Dict[str, str] = {'PUG': langlevel_file}
+        #env: Dict[str, str] = {'PUG': langlevel_file}
 
-        self.process = pexpect.spawn(pug_executable, encoding='utf-8', cwd=src_dir, env=env)  # type: ignore
+        self.process = pexpect.spawn(pug_executable, args=[f"-L{langlevel}"], encoding='utf-8') # type: ignore
         self.process.expect(PUG_PROMPT)  # type: ignore
 
     def tearDown(self):

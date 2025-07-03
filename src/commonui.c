@@ -109,7 +109,7 @@ static Void local optionInfo() {	/* Print information about command */
 	printf(fmtc,toggle[i].c,toggle[i].description);
 
     printf("\nOTHER OPTIONS: (leading + or - makes no difference)\n");
-    printf(fmts,"hnum","Set heap size (cannot be changed within Gofer)");
+    printf(fmts,"hnum","Set heap size (cannot be changed within Pug)");
     printf(fmts,"pstr","Set prompt string to str");
     printf(fmts,"rstr","Set repeat last expression string to str");
 #ifdef TECH_TOGGLES
@@ -122,7 +122,7 @@ static Void local optionInfo() {	/* Print information about command */
 #ifdef TECH_TOGGLES
     printf("-h%d -p%s -x%d -r%s\n",heapSize,prompt,maxEvidLevel,repeatStr);
 #else
-    printf("-h%d -p%s -r%s\n",heapSize,prompt,repeatStr);
+    printf("-h%d -p%s -r%s -L%s\n",heapSize,prompt,repeatStr,currentLangLevel);
 #endif
 }
 
@@ -137,6 +137,12 @@ String s; {
 	      newSyntax = state;
 	      everybody(CHANGE_SYNTAX);
 	      return;
+		
+		case 'L' : if (s[1]) {
+			   if (currentLangLevel) free(currentLangLevel);
+			   currentLangLevel = strCopy(s+1);
+		       }
+			   return;
 
 	    case 'n' : if (s[1]) {
 			   if (outputFile) free(outputFile);

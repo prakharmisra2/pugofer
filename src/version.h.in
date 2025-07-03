@@ -1,0 +1,2 @@
+#pragma once
+#define PUG_VERSION "@PROJECT_VERSION@"
